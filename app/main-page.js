@@ -8,6 +8,10 @@ var imagepickerModule = require("nativescript-imagepicker");
 
 var bghttpModule = require("nativescript-background-http");
 var session = bghttpModule.session("image-upload");
+var fs = require("file-system");
+var enums = require("ui/enums");
+var imageSource = require("image-source");
+var imageModule = require("ui/image");
 
 var imageItems = new observableArray.ObservableArray();
 var mainViewModel = new observable.Observable();
@@ -59,21 +63,22 @@ function onSelectSingleTap(args) {
     }
 }
 
-function sendImages(uri, fileUri) {
-    
-    imageName = extractImageName(fileUri);
-    
+function sendImages(filePath) {
+
+    console.log("in sendImage - imageName: " + imageName);
+    console.log("in sendImage - filePath: " + filePath);
+
     var request = {
         url: "http://httpbin.org/post",
         method: "POST",
         headers: {
             "Content-Type": "application/octet-stream",
-            "File-Name": imageName
+            "File-Name": imageName.toString()
         },
-        description: "{ 'uploading': " + imageName + " }"
+        description: "{ 'uploading': " + imageName.toString() + " }"
     };
     
-    var task = session.uploadFile(fileUri, request);
+    var task = session.uploadFile(filePath, request);
     
     task.on("progress", logEvent);
     task.on("error", logEvent);
@@ -90,7 +95,7 @@ function sendImages(uri, fileUri) {
             console.log('Total bytes to transfer: ' + e.totalBytes);
         }  
     }
-    
+
     return task;
 }
 
@@ -103,27 +108,39 @@ function startSelection(context) {
 		})
 		.then(function(selection) {
 			selection.forEach(function(selected) {
-                selected.uploadTask = sendImages(selected.uri, selected.fileUri);             
-                selected.imageName = imageName;
+                imageName = new Date().getTime().toString() + ".jpg";
                 
-                console.log("----------------");
-                console.log("uri: " + selected.uri);           
-                console.log("fileUri: " + selected.fileUri);
-                console.log('Image name:' + imageName);
+                var tempFolder = fs.knownFolders.temp();
+                var filePath = fs.path.join(tempFolder.path, imageName);
                 
-                imageItems.push(selected);
+                selected.getImage().then(function(resultImg) {
+
+                    var isSaved = resultImg.saveToFile(filePath, enums.ImageFormat.jpg);
+
+                    console.log("is image saved!? : " + isSaved);
+                    var saved = imageSource.fromFile(filePath);
+
+                }).then(function () {
+                    // once we have saved photo - pass its path as fileUri to sendImage(fileUri)
+                    console.log("saved filePath: " + filePath); 
+
+                    // uploadtask and imageName for use in binding
+                    selected.uploadTask = sendImages(filePath);  
+                    selected.imageName = imageName;
+
+                    imageItems.push(selected);
+
+                }).catch(function (e) {
+                    console.log(e);
+                    console.log(e.stack);
+                })               
+                
 			});
-			//list.items = selection;
+
 		}).catch(function (e) {
 			console.log(e);
+            console.log(e.stack);
 		});
-}
-
-function extractImageName(fileUri) {
-    var pattern = /[^/]*$/;
-    var imageName = fileUri.match(pattern);
-    
-    return imageName;
 }
 
 function listViewItemTap(args) {  
