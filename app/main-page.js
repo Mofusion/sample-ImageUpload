@@ -108,41 +108,29 @@ function startSelection(context) {
 		})
 		.then(function(selection) {
 			selection.forEach(function(selected) {
-                imageName = new Date().getTime().toString() + ".jpg";
-                
+                imageName = new Date().getTime().toString() + ".png";
                 var tempFolder = fs.knownFolders.temp();
-                var filePath = fs.path.join(tempFolder.path, imageName);
-                
+                var filePath = fs.path.join(tempFolder.path, imageName); 
+
                 selected.getImage().then(function(resultImg) {
 
-                    var isSaved = resultImg.saveToFile(filePath, "jpg");
-
-                    console.log("is image saved!? : " + isSaved);
+                    var isSaved = resultImg.saveToFile(filePath, "png");
                     var saved = imageSource.fromFile(filePath);
 
                 }).then(function () {
-                    // once we have saved photo - pass its path as fileUri to sendImage(fileUri)
-                    console.log("saved filePath: " + filePath); 
-
                     var loaded = imageSource.fromFile(filePath);
-                    console.log(loaded);
-                    console.log(loaded.width);
 
-                    // uploadtask and imageName for use in binding
                     selected.uploadTask = sendImages(filePath);  
                     selected.imageName = imageName;
-
                     imageItems.push(selected);
 
                 }).catch(function (e) {
-                    console.log(e);
                     console.log(e.stack);
                 })               
                 
 			});
 
 		}).catch(function (e) {
-			console.log(e);
             console.log(e.stack);
 		});
 }
@@ -155,7 +143,6 @@ function listViewItemTap(args) {
 }
 
 exports.mainViewModel = mainViewModel;
-
 exports.pageLoaded = pageLoaded;
 exports.onSelectMultipleTap = onSelectMultipleTap;
 exports.onSelectSingleTap = onSelectSingleTap;
