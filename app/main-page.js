@@ -115,7 +115,7 @@ function startSelection(context) {
                 
                 selected.getImage().then(function(resultImg) {
 
-                    var isSaved = resultImg.saveToFile(filePath, enums.ImageFormat.jpg);
+                    var isSaved = resultImg.saveToFile(filePath, "jpg");
 
                     console.log("is image saved!? : " + isSaved);
                     var saved = imageSource.fromFile(filePath);
@@ -123,6 +123,10 @@ function startSelection(context) {
                 }).then(function () {
                     // once we have saved photo - pass its path as fileUri to sendImage(fileUri)
                     console.log("saved filePath: " + filePath); 
+
+                    var loaded = imageSource.fromFile(filePath);
+                    console.log(loaded);
+                    console.log(loaded.width);
 
                     // uploadtask and imageName for use in binding
                     selected.uploadTask = sendImages(filePath);  
