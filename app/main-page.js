@@ -2,7 +2,8 @@ var platformModule = require("platform");
 var frameModule = require("ui/frame");
 var observable = require("data/observable");
 var observableArray = require("data/observable-array");
-
+var fs = require('file-system');
+var enums = require("ui/enums");
 var permissions = require( "nativescript-permissions");
 var imagepickerModule = require("nativescript-imagepicker");
 
@@ -59,8 +60,8 @@ function onSelectSingleTap(args) {
     }
 }
 
-function sendImages(uri, fileUri) {
-    
+function sendImages(selected) {
+    let fileUri = selected.fileUri;
     imageName = extractImageName(fileUri);
     
     var request = {
@@ -73,13 +74,23 @@ function sendImages(uri, fileUri) {
         description: "{ 'uploading': " + imageName + " }"
     };
     
-    var task = session.uploadFile(fileUri, request);
+    //get the image source and upload from there
+    selected.getImage().then(imageSource => {
+        let temp = fs.knownFolders.temp();
+        let uniqueName = '_' + Math.random().toString(36).substr(2, 9);
+        let filePath = fs.path.join(temp.path, uniqueName + ".jpg");
+        let saved = imageSource.saveToFile(filePath, enums.ImageFormat.jpeg);
+        console.log(`item saved:${saved}`);
+        var task = session.uploadFile(filePath, request);
     
-    task.on("progress", logEvent);
-    task.on("error", logEvent);
-    task.on("complete", logEvent);
-    
-    function logEvent(e) {      
+        task.on("progress", logEvent);
+        task.on("error", logEvent);
+        task.on("complete", x => cleanFile(filePath));
+
+    });
+    //return task;
+}
+function logEvent(e) {      
         console.log("----------------");
         console.log('Status: ' + e.eventName);
         console.log('Error: ' + e.error);
@@ -90,10 +101,9 @@ function sendImages(uri, fileUri) {
             console.log('Total bytes to transfer: ' + e.totalBytes);
         }  
     }
-    
-    return task;
+function cleanFile(file){
+    fs.remove(file);
 }
-
 function startSelection(context) {
 	context
 		.authorize()
@@ -103,7 +113,8 @@ function startSelection(context) {
 		})
 		.then(function(selection) {
 			selection.forEach(function(selected) {
-                selected.uploadTask = sendImages(selected.uri, selected.fileUri);             
+                sendImages(selected);
+                //selected.uploadTask = sendImages(selected);             
                 selected.imageName = imageName;
                 
                 console.log("----------------");
@@ -123,7 +134,7 @@ function extractImageName(fileUri) {
     var pattern = /[^/]*$/;
     var imageName = fileUri.match(pattern);
     
-    return imageName;
+    return imageName[0];
 }
 
 function listViewItemTap(args) {  
